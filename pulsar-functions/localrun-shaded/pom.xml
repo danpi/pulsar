@@ -83,7 +83,7 @@
                             <target>
                                 <!-- shade the AsyncHttpClient ahc-default.properties files -->
                                 <replace token= "org.asynchttpclient."
-                                         value="org.apache.pulsar.shade.org.asynchttpclient."
+                                         value="org.apache.pulsar.functions.runtime.shaded.org.asynchttpclient."
                                          file="${project.build.directory}/classes/org/asynchttpclient/config/ahc-default.properties"/>
                             </target>
                         </configuration>
@@ -135,6 +135,9 @@
                                     <include>org.apache.avro:avro</include>
                                     <include>com.beust:*</include>
                                     <include>net.jodah:*</include>
+                                    <include>io.airlift:*</include>
+                                    <include>com.yahoo.datasketches:*</include>
+                                    <include>io.netty.resolver:*</include>
                                 </includes>
                             </artifactSet>
                             <filters>
@@ -374,8 +377,12 @@
                                     <shadedPattern>org.apache.pulsar.functions.runtime.shaded.avo.shaded</shadedPattern>
                                 </relocation>
                                 <relocation>
-                                    <pattern>com.yahoo</pattern>
-                                    <shadedPattern>org.apache.pulsar.functions.runtime.shaded.com.yahoo</shadedPattern>
+                                    <pattern>com.yahoo.datasketches</pattern>
+                                    <shadedPattern>org.apache.pulsar.shaded.com.yahoo.datasketches</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.yahoo.sketches</pattern>
+                                    <shadedPattern>org.apache.pulsar.shaded.com.yahoo.sketches</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>com.beust</pattern>
@@ -409,7 +416,11 @@
                                 -->
                                 <relocation>
                                     <pattern>org.asynchttpclient</pattern>
-                                    <shadedPattern>org.apache.pulsar.shade.org.asynchttpclient</shadedPattern>
+                                    <shadedPattern>org.apache.pulsar.functions.runtime.shaded.org.asynchttpclient</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.airlift</pattern>
+                                    <shadedPattern>org.apache.pulsar.functions.runtime.shaded.io.airlift</shadedPattern>
                                 </relocation>
                                 <!-- DONT ever shade log4j, otherwise logging won't work anymore in running functions in process mode
                                 <relocation>
