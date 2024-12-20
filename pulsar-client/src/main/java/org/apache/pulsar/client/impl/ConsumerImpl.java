@@ -69,6 +69,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Getter;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.pulsar.client.api.Consumer;
@@ -98,7 +99,6 @@ import org.apache.pulsar.client.impl.metrics.UpDownCounter;
 import org.apache.pulsar.client.impl.schema.AutoConsumeSchema;
 import org.apache.pulsar.client.impl.transaction.TransactionImpl;
 import org.apache.pulsar.client.util.ExecutorProvider;
-import org.apache.pulsar.client.util.NameUtil;
 import org.apache.pulsar.client.util.RetryMessageUtil;
 import org.apache.pulsar.common.allocator.PulsarByteBufAllocator;
 import org.apache.pulsar.common.api.EncryptionContext;
@@ -298,7 +298,13 @@ public class ConsumerImpl<T> extends ConsumerBase<T> implements ConnectionHandle
         this.subscriptionMode = conf.getSubscriptionMode();
         if (startMessageId != null) {
             MessageIdAdv firstChunkMessageId = ((MessageIdAdv) startMessageId).getFirstChunkMessageId();
-            this.startMessageId = (firstChunkMessageId == null) ? (MessageIdAdv) startMessageId : firstChunkMessageId;
+            if (conf.isResetIncludeHead() && firstChunkMessageId != null) {
+                // The chunk message id's ledger id and entry id are the last chunk's ledger id and entry id, when
+                // startMessageIdInclusive() is enabled, we need to start from the first chunk's message id
+                this.startMessageId = firstChunkMessageId;
+            } else {
+                this.startMessageId = (MessageIdAdv) startMessageId;
+            }
         }
         this.initialStartMessageId = this.startMessageId;
         this.startMessageRollbackDurationInSec = startMessageRollbackDurationInSec;
@@ -752,6 +758,8 @@ public class ConsumerImpl<T> extends ConsumerBase<T> implements ConnectionHandle
             } catch (Exception e) {
                 result.completeExceptionally(e);
             }
+        } else {
+            result.completeExceptionally(new PulsarClientException("Retry letter producer is null."));
         }
         MessageId finalMessageId = messageId;
         result.exceptionally(ex -> {
@@ -2267,7 +2275,7 @@ public class ConsumerImpl<T> extends ConsumerBase<T> implements ConnectionHandle
                                     .initialSubscriptionName(this.deadLetterPolicy.getInitialSubscriptionName())
                                     .topic(this.deadLetterPolicy.getDeadLetterTopic())
                                     .producerName(String.format("%s-%s-%s-%s-DLQ", this.topicName, this.subscription,
-                                            this.consumerName, NameUtil.generateRandomName()))
+                                            this.consumerName, RandomStringUtils.randomAlphanumeric(5)))
                                     .blockIfQueueFull(false)
                                     .enableBatching(false)
                                     .enableChunking(true)
